@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# 根目录误放的截图副本（正式模板在 templates/）
+/accept.png
+/not_applicable.png
+/_*.png
+/full_*.png
+/shot_*.png
