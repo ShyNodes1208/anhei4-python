@@ -11,3 +11,5 @@ venv/
 /_*.png
 /full_*.png
 /shot_*.png
+bag_scan.json
+bag_scan.log

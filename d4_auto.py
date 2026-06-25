@@ -51,6 +51,24 @@ def bag_slot_xy(index):
     return x, y
 
 
+def slot_label(index):
+    return "%d-%d" % (index // cfg.COLS + 1, index % cfg.COLS + 1)
+
+
+def slot_range_indices():
+    """配置范围内、0 起算的格子序号。"""
+    total = cfg.ROWS * cfg.COLS
+    first = cfg.SLOT_FIRST - 1
+    last = cfg.SLOT_LAST - 1
+    if cfg.SLOT_FIRST < 1 or cfg.SLOT_LAST < cfg.SLOT_FIRST:
+        raise ValueError("SLOT_FIRST / SLOT_LAST 配置无效")
+    if last >= total:
+        raise ValueError(
+            "SLOT_LAST=%d 超出背包容量 %d 格" % (cfg.SLOT_LAST, total)
+        )
+    return list(range(first, last + 1))
+
+
 def clear_cube():
     """点“清除”按钮清空魔盒/取回装备（比右键取回安全；盒子为空也无害）。"""
     return ic.left_click(cfg.CLEAR_XY)
@@ -186,13 +204,98 @@ def transmute_one(index):
     return recipe_one(index, cfg.TPL_RECIPE_TRANSMUTE, cfg.TRANSMUTE_XY, "嬗变")
 
 
+# ==================== 三合一塑形（F9：范围内每 3 格一组）====================
+def three_in_one_group(indices):
+    labels = [slot_label(i) for i in indices]
+    log("  放入格: %s" % ", ".join(labels))
+
+    if not click_recipe(cfg.TPL_RECIPE_THREE_IN_ONE, cfg.THREE_IN_ONE_XY):
+        return STOPPED
+
+    for idx in indices:
+        bx, by = bag_slot_xy(idx)
+        if not ic.click_at(bx, by, button="right"):
+            clear_cube()
+            return STOPPED
+        if not ic.sleep_checked(cfg.AFTER_PLACE_DELAY):
+            clear_cube()
+            return STOPPED
+
+    if not ic.left_click(cfg.REFORGE_XY):
+        clear_cube()
+        return STOPPED
+
+    if not clear_cube():
+        return STOPPED
+
+    ic.move_safe()
+    return OK
+
+
+def run_three_in_one():
+    try:
+        indices = slot_range_indices()
+    except ValueError as e:
+        log("配置错误: %s" % e)
+        return
+
+    groups = [indices[i:i + 3] for i in range(0, len(indices), 3)]
+    full_groups = [g for g in groups if len(g) == 3]
+    leftover = groups[-1] if groups and len(groups[-1]) < 3 else []
+
+    log("【三合一塑形】将在 %.0f 秒后开始……" % cfg.START_DELAY)
+    log("范围: 第 %d~%d 格，共 %d 格 -> %d 组"
+        % (cfg.SLOT_FIRST, cfg.SLOT_LAST, len(indices), len(full_groups)))
+    if leftover:
+        log("注意: 末尾 %d 格不足 3 个，将跳过: %s"
+            % (len(leftover), ", ".join(slot_label(i) for i in leftover)))
+
+    if not ic.sleep_checked(cfg.START_DELAY):
+        ic.move_safe()
+        log("启动已取消。")
+        return
+
+    if not full_groups:
+        log("没有可执行的组（至少需要 3 格）。")
+        return
+
+    for num, group in enumerate(full_groups, 1):
+        if ic.stop_requested():
+            ic.move_safe()
+            log("三合一塑形已停止（完成 %d/%d 组）。" % (num - 1, len(full_groups)))
+            return
+
+        log("【三合一】第 %d/%d 组" % (num, len(full_groups)))
+        code = three_in_one_group(group)
+        if code == STOPPED:
+            ic.move_safe()
+            log("第 %d 组执行中断。" % num)
+            return
+
+        log("  第 %d 组完成。" % num)
+        if num < len(full_groups):
+            if not ic.sleep_checked(cfg.BETWEEN_GROUPS_DELAY):
+                ic.move_safe()
+                log("三合一塑形已停止。")
+                return
+
+    ic.move_safe()
+    log("全部 %d 组三合一塑形完成。" % len(full_groups))
+
+
 # ==================== 阶段调度 ====================
 def run_phase(label, process_fn):
-    total = cfg.ROWS * cfg.COLS
-    log("==== 阶段开始：%s，共%d格 ====" % (label, total))
+    try:
+        slots = slot_range_indices()
+    except ValueError as e:
+        log("配置错误: %s" % e)
+        return STOPPED
+
+    log("==== 阶段开始：%s，第 %d~%d 格共 %d 格 ===="
+        % (label, cfg.SLOT_FIRST, cfg.SLOT_LAST, len(slots)))
     done = 0
     skipped = 0
-    for index in range(total):
+    for index in slots:
         if ic.stop_requested():
             ic.move_safe()
             log("检测到停止键，%s阶段中断。" % label)
@@ -238,14 +341,35 @@ def run_all():
     log("全部阶段执行完成。")
 
 
+def run_transmute_only():
+    log("【仅嬗变】将在 %.0f 秒后开始……" % cfg.START_DELAY)
+    if not ic.sleep_checked(cfg.START_DELAY):
+        ic.move_safe()
+        log("启动已取消。")
+        return
+
+    if run_phase("嬗变物品", transmute_one) == STOPPED:
+        ic.move_safe()
+        return
+
+    ic.move_safe()
+    log("嬗变全部完成。")
+
+
 # ==================== 辅助：校准 / 截图 ====================
 def calibrate():
+    try:
+        slots = slot_range_indices()
+    except ValueError:
+        slots = [0, cfg.ROWS * cfg.COLS - 1]
+
     points = [
-        ("背包第1格", bag_slot_xy(0)),
-        ("背包最后一格", bag_slot_xy(cfg.ROWS * cfg.COLS - 1)),
+        ("范围首格", bag_slot_xy(slots[0])),
+        ("范围末格", bag_slot_xy(slots[-1])),
         ("添加词缀", cfg.ADD_AFFIX_XY),
         ("升级至传奇", cfg.UPGRADE_XY),
         ("嬗变物品", cfg.TRANSMUTE_XY),
+        ("三合一塑形", cfg.THREE_IN_ONE_XY),
         ("重塑", cfg.REFORGE_XY),
         ("接受", cfg.ACCEPT_XY),
         ("清除", cfg.CLEAR_XY),
@@ -275,17 +399,42 @@ def main():
         shot(); return
 
     print("=" * 50)
-    print(" 暗黑4 魔盒一键全流程（Python 图像识别版）")
-    print(" 处理范围：%d 行 x %d 列" % (cfg.ROWS, cfg.COLS))
-    print(" 阶段：加词缀=%s 升传奇=%s 嬗变=%s"
-          % (cfg.DO_ADD_AFFIX, cfg.DO_UPGRADE, cfg.DO_TRANSMUTE))
-    print(" 开始键: %s    停止键: %s" % (cfg.START_KEY.upper(), cfg.STOP_KEY.upper()))
+    print(" 暗黑4 魔盒自动化（Python 图像识别版）")
+    print(" 背包: %d 行 x %d 列，处理范围: 第 %d ~ %d 格"
+          % (cfg.ROWS, cfg.COLS, cfg.SLOT_FIRST, cfg.SLOT_LAST))
+    print(" %s  三阶段: 加词缀=%s 升传奇=%s 嬗变=%s"
+          % (cfg.START_KEY.upper(), cfg.DO_ADD_AFFIX, cfg.DO_UPGRADE, cfg.DO_TRANSMUTE))
+    print(" %s  三合一塑形（每 3 格一组）" % cfg.THREE_IN_ONE_KEY.upper())
+    print(" %s  仅嬗变物品" % cfg.TRANSMUTE_ONLY_KEY.upper())
+    print(" %s  停止" % cfg.STOP_KEY.upper())
     print("=" * 50)
-    print("切到游戏，打开魔盒+背包，按 %s 开始……" % cfg.START_KEY.upper())
+    print("切到游戏，打开魔盒+背包。")
 
     keyboard.add_hotkey(cfg.START_KEY, start_worker)
+    keyboard.add_hotkey(cfg.THREE_IN_ONE_KEY, start_three_in_one_worker)
+    keyboard.add_hotkey(cfg.TRANSMUTE_ONLY_KEY, start_transmute_only_worker)
     keyboard.wait("esc")  # 在控制台按 ESC 退出程序（不是游戏里的ESC）
     log("程序退出。")
+
+
+def start_three_in_one_worker():
+    """F9 回调：三合一塑形。"""
+    global _worker
+    if _worker is not None and _worker.is_alive():
+        log("已在运行中，忽略本次启动。")
+        return
+    _worker = threading.Thread(target=run_three_in_one, daemon=True)
+    _worker.start()
+
+
+def start_transmute_only_worker():
+    """F7 回调：仅嬗变。"""
+    global _worker
+    if _worker is not None and _worker.is_alive():
+        log("已在运行中，忽略本次启动。")
+        return
+    _worker = threading.Thread(target=run_transmute_only, daemon=True)
+    _worker.start()
 
 
 def start_worker():

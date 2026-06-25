@@ -14,9 +14,12 @@ import os
 SCREEN_W = 2560
 SCREEN_H = 1440
 
-# ==================== 背包处理范围（每次按实际背包改）====================
-ROWS = 1
-COLS = 2
+# ==================== 背包布局与处理范围 ====================
+ROWS = 3
+COLS = 11
+# 格子范围（1 起算，含首尾）；F7 / F8 / F9 共用此范围
+SLOT_FIRST = 1
+SLOT_LAST = 24
 
 # ==================== 阶段开关 ====================
 DO_ADD_AFFIX = True   # 阶段1：添加词缀
@@ -37,6 +40,7 @@ BAG_STEP_Y = 102
 ADD_AFFIX_XY = (1138, 330)    # 加词缀：空盒时在配方列表顶部（先点配方，再放装备）
 UPGRADE_XY = (1138, 1025)     # 升传奇：放入装备后的位置（先放装备，再点配方）
 TRANSMUTE_XY = (1140, 510)    # 嬗变：放入装备后的位置（先放装备，再点配方）
+THREE_IN_ONE_XY = (1140, 930) # 三合一塑形（F9，空盒时）
 
 REFORGE_XY = (468, 1140)      # “重塑”按钮
 ACCEPT_XY = (1138, 822)       # “接受”按钮（弹窗中部左侧；实际会优先点识别到的位置）
@@ -49,6 +53,7 @@ SAFE_XY = (2103, 929)         # 鼠标安全停留位置
 TPL_RECIPE_ADD_AFFIX = "recipe_add_affix.png"
 TPL_RECIPE_UPGRADE = "recipe_upgrade.png"
 TPL_RECIPE_TRANSMUTE = "recipe_transmute.png"
+TPL_RECIPE_THREE_IN_ONE = "recipe_three_in_one.png"
 
 # 配方列表所在的搜索区域 (left, top, width, height)
 REGION_RECIPE = (980, 280, 360, 1040)
@@ -75,14 +80,18 @@ REGION_ACCEPT = (1000, 760, 285, 140)       # “接受”按钮≈(1145,825)，
 REGION_NOT_APPLICABLE = (280, 1010, 640, 130)
 
 # ==================== 时间配置（秒）====================
-START_DELAY = 2.0           # 启动后等待
-MOVE_DELAY = 0.20           # 鼠标移动到位后等待
-STEP_DELAY = 1.0            # 每步点击后等待
-BETWEEN_ITEMS_DELAY = 1.0   # 每件装备之间等待
-BETWEEN_PHASES_DELAY = 1.0  # 每个阶段之间等待
-ACCEPT_WAIT_TIMEOUT = 2.5   # 等待“接受”按钮出现的最长时间
+START_DELAY = 1.8           # 启动后等待
+MOVE_DELAY = 0.30           # 鼠标移动到位后等待
+STEP_DELAY = 0.8            # 每步点击后等待
+BETWEEN_ITEMS_DELAY = 0.8   # 每件装备之间等待
+BETWEEN_PHASES_DELAY = 0.8  # 每个阶段之间等待
+BETWEEN_GROUPS_DELAY = 2.0  # 每组三合一完成后等待
+AFTER_PLACE_DELAY = 0.5     # 三合一右键放入后等待
+ACCEPT_WAIT_TIMEOUT = 1.8   # 等待“接受”按钮出现的最长时间
 DETECT_AFTER_PLACE = 0.6    # 放入装备后、判断是否“不适用”前的等待
 
 # ==================== 热键 ====================
-START_KEY = "f8"            # 按一下开始
-STOP_KEY = "f10"            # 运行中按住/按下停止
+START_KEY = "f8"            # 三阶段全流程
+THREE_IN_ONE_KEY = "f9"     # 三合一塑形（范围内每 3 格一组）
+TRANSMUTE_ONLY_KEY = "f7"   # 仅嬗变物品
+STOP_KEY = "f10"            # 运行中停止
