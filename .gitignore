@@ -13,3 +13,8 @@ venv/
 /shot_*.png
 bag_scan.json
 bag_scan.log
+
+# PyInstaller
+build/
+dist/
+*.spec.bak

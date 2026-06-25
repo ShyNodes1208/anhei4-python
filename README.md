@@ -30,6 +30,14 @@ python d4_auto.py
 
 切到游戏，打开魔盒+背包，按热键开始；控制台 **ESC** 退出。
 
+### 打包 exe（离线使用）
+
+```bash
+build_exe.bat
+```
+
+生成 `dist\d4_auto.exe`，拷贝到离线电脑即可运行，详见 [使用说明.md](使用说明.md) 第七节。
+
 ```bash
 python d4_auto.py --calibrate   # 校准坐标
 ```

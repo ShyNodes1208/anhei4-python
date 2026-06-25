@@ -18,6 +18,8 @@
   python d4_auto.py --shot        # 立即保存一张全屏截图，便于裁模板
 """
 
+import d4_bootstrap  # noqa: F401  打包 exe 时优先加载同目录 d4_config.py
+
 import sys
 import time
 import threading

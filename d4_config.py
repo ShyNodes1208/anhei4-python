@@ -9,6 +9,14 @@
 """
 
 import os
+import sys
+
+
+def _template_dir():
+    """模板目录：开发时用项目 templates/；打包后在 exe 内置资源中。"""
+    if getattr(sys, "frozen", False):
+        return os.path.join(sys._MEIPASS, "templates")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
 # ==================== 屏幕分辨率 ====================
 SCREEN_W = 2560
@@ -61,7 +69,7 @@ REGION_RECIPE = (980, 280, 360, 1040)
 RECIPE_THRESHOLD = 0.72
 
 # ==================== 模板图（放在 templates/ 下）====================
-TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+TEMPLATE_DIR = _template_dir()
 
 # “接受”按钮模板
 TPL_ACCEPT = "accept.png"
